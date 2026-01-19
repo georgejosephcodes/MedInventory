@@ -2,26 +2,25 @@ const Redis = require("ioredis");
 
 let isRedisReady = false;
 
-const redis = new Redis({
-  host: process.env.REDIS_HOST || "127.0.0.1",
-  port: process.env.REDIS_PORT || 6379,
-  maxRetriesPerRequest: 1,
-  enableReadyCheck: true,
-});
+const redis = process.env.REDIS_URL
+  ? new Redis(process.env.REDIS_URL, {
+      tls: {},                // REQUIRED
+      maxRetriesPerRequest: 1,
+      enableReadyCheck: true,
+    })
+  : new Redis({
+      host: "127.0.0.1",
+      port: 6379,
+    });
 
 redis.on("ready", () => {
   isRedisReady = true;
-  console.log("Redis ready");
+  console.log("✅ Redis ready");
 });
 
 redis.on("error", (err) => {
   isRedisReady = false;
-  console.error("Redis error:", err.message);
-});
-
-redis.on("end", () => {
-  isRedisReady = false;
-  console.warn("Redis connection closed");
+  console.error("❌ Redis error:", err.message);
 });
 
 redis.isReady = () => isRedisReady;
