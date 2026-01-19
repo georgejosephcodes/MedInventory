@@ -27,6 +27,8 @@ import {
 
 import { useToast } from "@/hooks/use-toast";
 
+const BILLING_STORAGE_KEY = "billing_session_state";
+
 /* =========================
    BILLING
 ========================= */
@@ -47,6 +49,46 @@ export default function Billing() {
   const [gstRate, setGstRate] = useState(5);
 
   const [loading, setLoading] = useState(false);
+
+  /* =========================
+     CLEAR ON REFRESH / TAB CLOSE
+  ========================= */
+  useEffect(() => {
+    const handleUnload = () => {
+      sessionStorage.removeItem(BILLING_STORAGE_KEY);
+    };
+
+    window.addEventListener("beforeunload", handleUnload);
+    return () =>
+      window.removeEventListener("beforeunload", handleUnload);
+  }, []);
+
+  /* =========================
+     RESTORE SESSION (ON MOUNT)
+  ========================= */
+  useEffect(() => {
+    const saved = sessionStorage.getItem(BILLING_STORAGE_KEY);
+    if (saved) {
+      const data = JSON.parse(saved);
+      setCart(data.cart || []);
+      setPatientId(data.patientId || "");
+      setGstRate(data.gstRate ?? 5);
+    }
+  }, []);
+
+  /* =========================
+     SAVE SESSION (ON CHANGE)
+  ========================= */
+  useEffect(() => {
+    sessionStorage.setItem(
+      BILLING_STORAGE_KEY,
+      JSON.stringify({
+        cart,
+        patientId,
+        gstRate,
+      })
+    );
+  }, [cart, patientId, gstRate]);
 
   /* =========================
      LOAD MEDICINES
@@ -204,6 +246,9 @@ export default function Billing() {
         description: `Total ₹${grandTotal.toFixed(2)}`,
       });
 
+      // clear on success
+      sessionStorage.removeItem(BILLING_STORAGE_KEY);
+
       setCart([]);
       setPatientId("");
     } catch {
@@ -283,7 +328,6 @@ export default function Billing() {
                 setShowDropdown(true);
               }}
             />
-
             {showDropdown && search && (
               <div className="absolute z-10 w-full border bg-background rounded shadow">
                 {filteredMedicines.map((m) => (
@@ -370,10 +414,7 @@ export default function Billing() {
                       </TableCell>
                       <TableCell className="flex gap-4">
                         {editingId === c.medicineId ? (
-                          <Button
-                            size="sm"
-                            onClick={() => saveEdit(c)}
-                          >
+                          <Button size="sm" onClick={() => saveEdit(c)}>
                             Save
                           </Button>
                         ) : (

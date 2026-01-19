@@ -31,6 +31,8 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { AuthContext } from "../context/AuthContext";
 
+const STOCK_IN_STORAGE_KEY = "inventory_stock_in_form";
+
 /* =========================
    DATE PICKER
 ========================= */
@@ -87,6 +89,61 @@ export default function Inventory() {
   const [supplier, setSupplier] = useState("");
 
   const [loadingAction, setLoadingAction] = useState(false);
+
+  /* =========================
+     CLEAR ON REFRESH / TAB CLOSE
+  ========================= */
+  useEffect(() => {
+    const handleUnload = () => {
+      sessionStorage.removeItem(STOCK_IN_STORAGE_KEY);
+    };
+
+    window.addEventListener("beforeunload", handleUnload);
+    return () =>
+      window.removeEventListener("beforeunload", handleUnload);
+  }, []);
+
+  /* =========================
+     RESTORE DRAFT (SESSION)
+  ========================= */
+  useEffect(() => {
+    const saved = sessionStorage.getItem(STOCK_IN_STORAGE_KEY);
+    if (saved) {
+      const data = JSON.parse(saved);
+      setMedicineId(data.medicineId || "");
+      setBatchNumber(data.batchNumber || "");
+      setExpiryDate(data.expiryDate || "");
+      setInQuantity(data.inQuantity || "");
+      setUnitPrice(data.unitPrice || "");
+      setSupplier(data.supplier || "");
+    }
+  }, []);
+
+  /* =========================
+     SAVE DRAFT (SESSION)
+  ========================= */
+  useEffect(() => {
+    if (!medicineId) return;
+
+    sessionStorage.setItem(
+      STOCK_IN_STORAGE_KEY,
+      JSON.stringify({
+        medicineId,
+        batchNumber,
+        expiryDate,
+        inQuantity,
+        unitPrice,
+        supplier,
+      })
+    );
+  }, [
+    medicineId,
+    batchNumber,
+    expiryDate,
+    inQuantity,
+    unitPrice,
+    supplier,
+  ]);
 
   /* =========================
      LOAD MEDICINES
@@ -165,6 +222,9 @@ export default function Inventory() {
       });
 
       toast({ title: "Stock Added Successfully" });
+
+      // clear draft on success
+      sessionStorage.removeItem(STOCK_IN_STORAGE_KEY);
 
       setBatchNumber("");
       setExpiryDate("");
