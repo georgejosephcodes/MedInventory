@@ -1,5 +1,6 @@
 const mongoose = require("mongoose");
 const StockLog = require("../models/StockLog.model");
+const cacheService = require("../services/cacheService");
 
 const getStockLogs = async (req, res) => {
   try {
@@ -11,6 +12,24 @@ const getStockLogs = async (req, res) => {
       page = 1,
       limit = 50,
     } = req.query;
+
+    /* =========================
+       CACHE KEY (query-specific)
+    ========================= */
+    const cacheKey = `stockLogs:${JSON.stringify({
+      action,
+      medicineId,
+      from,
+      to,
+      page,
+      limit,
+    })}`;
+
+    // 1. Try cache
+    const cached = await cacheService.get(cacheKey);
+    if (cached) {
+      return res.status(200).json(cached);
+    }
 
     const query = {};
 
@@ -60,12 +79,13 @@ const getStockLogs = async (req, res) => {
         .populate("performedBy", "name email role")
         .sort({ createdAt: -1 })
         .skip(skip)
-        .limit(Number(limit)),
+        .limit(Number(limit))
+        .lean(),
 
       StockLog.countDocuments(query),
     ]);
 
-    res.status(200).json({
+    const response = {
       success: true,
       data: logs,
       pagination: {
@@ -73,7 +93,12 @@ const getStockLogs = async (req, res) => {
         limit: Number(limit),
         total,
       },
-    });
+    };
+
+    // 2. Cache result (short TTL – logs change often)
+    await cacheService.set(cacheKey, response, 30);
+
+    res.status(200).json(response);
   } catch (err) {
     console.error("AUDIT LOG ERROR:", err);
     res.status(500).json({

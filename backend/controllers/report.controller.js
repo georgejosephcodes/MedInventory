@@ -1,6 +1,7 @@
 const StockLog = require("../models/StockLog.model");
 const Batch = require("../models/Batch.model");
 const Medicine = require("../models/Medicine.model");
+const cacheService = require("../services/cacheService");
 
 /* =========================
    DATE UTILS
@@ -16,13 +17,11 @@ const getDateRange = (from, to) => {
   const start = new Date(from);
   let end = new Date(to);
 
-  const isToday =
-    end.toDateString() === now.toDateString();
+  const isToday = end.toDateString() === now.toDateString();
 
   if (isToday) {
     end = now;
   } else {
-    // otherwise include full selected day
     end.setHours(23, 59, 59, 999);
   }
 
@@ -35,6 +34,13 @@ const getDateRange = (from, to) => {
 const monthlyUsageReport = async (req, res) => {
   try {
     const { from, to } = req.query;
+
+    const cacheKey = `report:monthlyUsage:${JSON.stringify({ from, to })}`;
+    const cached = await cacheService.get(cacheKey);
+    if (cached) {
+      return res.status(200).json(cached);
+    }
+
     const { start, end } = getDateRange(from, to);
 
     const data = await StockLog.aggregate([
@@ -75,11 +81,11 @@ const monthlyUsageReport = async (req, res) => {
       { $sort: { totalUsed: 1 } },
     ]);
 
-    res.status(200).json({
-      from: start,
-      to: end,
-      data,
-    });
+    const response = { from: start, to: end, data };
+
+    await cacheService.set(cacheKey, response, 60);
+
+    res.status(200).json(response);
   } catch (err) {
     res.status(500).json({
       message: "Failed to generate usage report",
@@ -94,6 +100,18 @@ const monthlyUsageReport = async (req, res) => {
 const topConsumedMedicines = async (req, res) => {
   try {
     const { from, to, limit = 10 } = req.query;
+
+    const cacheKey = `report:topConsumed:${JSON.stringify({
+      from,
+      to,
+      limit,
+    })}`;
+
+    const cached = await cacheService.get(cacheKey);
+    if (cached) {
+      return res.status(200).json(cached);
+    }
+
     const { start, end } = getDateRange(from, to);
 
     const data = await StockLog.aggregate([
@@ -134,7 +152,11 @@ const topConsumedMedicines = async (req, res) => {
       { $limit: Number(limit) },
     ]);
 
-    res.status(200).json({ data });
+    const response = { data };
+
+    await cacheService.set(cacheKey, response, 60);
+
+    res.status(200).json(response);
   } catch (err) {
     res.status(500).json({
       message: "Failed to fetch top consumed medicines",
@@ -149,6 +171,13 @@ const topConsumedMedicines = async (req, res) => {
 const expiredWastageReport = async (req, res) => {
   try {
     const { from, to } = req.query;
+
+    const cacheKey = `report:expiredWastage:${JSON.stringify({ from, to })}`;
+    const cached = await cacheService.get(cacheKey);
+    if (cached) {
+      return res.status(200).json(cached);
+    }
+
     const { start, end } = getDateRange(from, to);
 
     const data = await StockLog.aggregate([
@@ -188,7 +217,11 @@ const expiredWastageReport = async (req, res) => {
       { $sort: { wastedQty: -1 } },
     ]);
 
-    res.status(200).json({ data });
+    const response = { data };
+
+    await cacheService.set(cacheKey, response, 60);
+
+    res.status(200).json(response);
   } catch (err) {
     res.status(500).json({
       message: "Failed to generate expiry wastage report",

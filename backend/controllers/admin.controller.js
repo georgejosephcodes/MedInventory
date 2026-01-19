@@ -1,13 +1,26 @@
 const mongoose = require("mongoose");
 const User = require("../models/User.model");
+const cacheService = require("../services/cacheService");
+
+const USERS_CACHE_KEY = "users:all";
 
 /* =========================
    GET ALL USERS (ADMIN)
 ========================= */
 const getAllUsers = async (req, res) => {
   try {
-    // Return active + inactive users, never return password
-    const users = await User.find().select("-password");
+    // 1. Check cache
+    const cachedUsers = await cacheService.get(USERS_CACHE_KEY);
+    if (cachedUsers) {
+      return res.status(200).json({ users: cachedUsers });
+    }
+
+    // 2. Fetch from DB
+    const users = await User.find().select("-password").lean();
+
+    // 3. Cache result (5 minutes)
+    await cacheService.set(USERS_CACHE_KEY, users, 300);
+
     res.status(200).json({ users });
   } catch (err) {
     res.status(500).json({
@@ -18,8 +31,6 @@ const getAllUsers = async (req, res) => {
 
 /* =========================
    CREATE USER (ADMIN)
-   - Initial password allowed
-   - Schema hashes password
 ========================= */
 const createUser = async (req, res) => {
   try {
@@ -38,10 +49,13 @@ const createUser = async (req, res) => {
       name,
       email,
       password,
-      role, // MUST BE ENUM VALUE
+      role,
       isActive: true,
       forcePasswordChange: true,
     });
+
+    // invalidate cache
+    await cacheService.del(USERS_CACHE_KEY);
 
     res.status(201).json({
       message: "User created successfully",
@@ -56,26 +70,22 @@ const createUser = async (req, res) => {
     });
   } catch (err) {
     res.status(500).json({
-      message: err.message, 
+      message: err.message,
     });
   }
 };
 
 /* =========================
    UPDATE USER (ADMIN)
-   🔒 PASSWORD UPDATES BLOCKED
 ========================= */
 const updateUser = async (req, res) => {
   try {
     const { id } = req.params;
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400).json({
-        message: "Invalid user id",
-      });
+      return res.status(400).json({ message: "Invalid user id" });
     }
 
-    // Explicitly remove password if sent
     const { password, ...allowedUpdates } = req.body;
 
     const user = await User.findByIdAndUpdate(
@@ -85,10 +95,11 @@ const updateUser = async (req, res) => {
     ).select("-password");
 
     if (!user) {
-      return res.status(404).json({
-        message: "User not found",
-      });
+      return res.status(404).json({ message: "User not found" });
     }
+
+    //  invalidate cache
+    await cacheService.del(USERS_CACHE_KEY);
 
     res.status(200).json({
       message: "User updated successfully",
@@ -102,33 +113,30 @@ const updateUser = async (req, res) => {
 };
 
 /* =========================
-   DISABLE USER (SOFT DELETE)
+   DISABLE USER
 ========================= */
 const disableUser = async (req, res) => {
   try {
     const { id } = req.params;
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400).json({
-        message: "Invalid user id",
-      });
+      return res.status(400).json({ message: "Invalid user id" });
     }
 
     const user = await User.findById(id);
     if (!user) {
-      return res.status(404).json({
-        message: "User not found",
-      });
+      return res.status(404).json({ message: "User not found" });
     }
 
     if (user.role === "ADMIN") {
-      return res.status(403).json({
-        message: "Admin cannot be disabled",
-      });
+      return res.status(403).json({ message: "Admin cannot be disabled" });
     }
 
     user.isActive = false;
     await user.save();
+
+    //  invalidate cache
+    await cacheService.del(USERS_CACHE_KEY);
 
     res.status(200).json({
       message: "User disabled successfully",
@@ -148,26 +156,23 @@ const enableUser = async (req, res) => {
     const { id } = req.params;
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400).json({
-        message: "Invalid user id",
-      });
+      return res.status(400).json({ message: "Invalid user id" });
     }
 
     const user = await User.findById(id);
     if (!user) {
-      return res.status(404).json({
-        message: "User not found",
-      });
+      return res.status(404).json({ message: "User not found" });
     }
 
     if (user.role === "ADMIN") {
-      return res.status(403).json({
-        message: "Admin cannot be modified",
-      });
+      return res.status(403).json({ message: "Admin cannot be modified" });
     }
 
     user.isActive = true;
     await user.save();
+
+    // invalidate cache
+    await cacheService.del(USERS_CACHE_KEY);
 
     res.status(200).json({
       message: "User enabled successfully",

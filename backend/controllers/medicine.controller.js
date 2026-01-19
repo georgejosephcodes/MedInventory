@@ -1,4 +1,7 @@
 const Medicine = require("../models/Medicine.model");
+const cacheService = require("../services/cacheService");
+
+const MEDICINES_CACHE_KEY = "medicines:active";
 
 /**
  * =====================
@@ -26,7 +29,6 @@ const createMedicine = async (req, res) => {
     name = name.trim().toLowerCase();
 
     const existing = await Medicine.findOne({ name });
-
     if (existing) {
       return res.status(409).json({
         success: false,
@@ -42,6 +44,9 @@ const createMedicine = async (req, res) => {
       createdBy: req.user._id,
       updatedBy: req.user._id,
     });
+
+    // invalidate cache
+    await cacheService.del(MEDICINES_CACHE_KEY);
 
     res.status(201).json({
       success: true,
@@ -63,7 +68,22 @@ const createMedicine = async (req, res) => {
  */
 const getMedicines = async (req, res) => {
   try {
-    const medicines = await Medicine.find({ isActive: true }).sort("name");
+    // 1. check cache
+    const cached = await cacheService.get(MEDICINES_CACHE_KEY);
+    if (cached) {
+      return res.status(200).json({
+        success: true,
+        data: cached,
+      });
+    }
+
+    // 2. fetch from DB
+    const medicines = await Medicine.find({ isActive: true })
+      .sort("name")
+      .lean();
+
+    // 3. cache result (5 minutes)
+    await cacheService.set(MEDICINES_CACHE_KEY, medicines, 300);
 
     res.status(200).json({
       success: true,
@@ -131,6 +151,9 @@ const updateMedicine = async (req, res) => {
     medicine.updatedBy = req.user._id;
     await medicine.save();
 
+    // invalidate cache
+    await cacheService.del(MEDICINES_CACHE_KEY);
+
     res.status(200).json({
       success: true,
       data: medicine,
@@ -163,6 +186,9 @@ const deleteMedicine = async (req, res) => {
     medicine.isActive = false;
     medicine.updatedBy = req.user._id;
     await medicine.save();
+
+    // invalidate cache
+    await cacheService.del(MEDICINES_CACHE_KEY);
 
     res.status(200).json({
       success: true,
