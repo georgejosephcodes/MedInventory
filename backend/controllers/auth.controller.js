@@ -57,6 +57,52 @@ const login = async (req, res) => {
 
 /**
  * =====================
+ * REGISTER (ADMIN ONLY)
+ * =====================
+ */
+const register = async (req, res) => {
+  try {
+    const { name, email, password, role } = req.body;
+
+    if (!name || !email || !password || !role) {
+      return res.status(400).json({
+        success: false,
+        message: "All fields are required",
+      });
+    }
+
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(409).json({
+        success: false,
+        message: "User already exists",
+      });
+    }
+
+    const user = await User.create({
+      name,
+      email,
+      password,
+      role,
+      forcePasswordChange: true,
+    });
+
+    res.status(201).json({
+      success: true,
+      message: "User created successfully",
+      userId: user._id,
+    });
+  } catch (err) {
+    console.error("REGISTER ERROR:", err);
+    res.status(500).json({
+      success: false,
+      message: "User registration failed",
+    });
+  }
+};
+
+/**
+ * =====================
  * FORGOT PASSWORD
  * =====================
  */
@@ -73,7 +119,6 @@ const forgotPassword = async (req, res) => {
 
     const user = await User.findOne({ email });
 
-    // Do not leak user existence
     if (!user) {
       return res.status(200).json({
         success: true,
@@ -199,6 +244,7 @@ const getMe = async (req, res) => {
 
 module.exports = {
   login,
+  register,
   forgotPassword,
   resetPassword,
   getMe,
