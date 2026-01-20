@@ -22,7 +22,7 @@ const login = async (req, res) => {
 
     const user = await User.findOne({ email }).select("+password");
 
-    if (!user) {
+    if (!user || !(await user.comparePassword(password))) {
       return res.status(401).json({
         success: false,
         message: "Invalid credentials",
@@ -36,17 +36,6 @@ const login = async (req, res) => {
       });
     }
 
-    const isMatch = await user.comparePassword(password);
-
-    if (!isMatch) {
-      return res.status(401).json({
-        success: false,
-        message: "Invalid credentials",
-      });
-    }
-
-
-
     const token = generateToken({
       id: user._id,
       role: user.role,
@@ -59,63 +48,13 @@ const login = async (req, res) => {
     });
   } catch (err) {
     console.error("LOGIN ERROR:", err);
-    res.status(500).json({
-      success: false,
-      message: "Login failed",
-    });
+    res.status(500).json({ success: false, message: "Login failed" });
   }
 };
 
 /**
  * =====================
- * REGISTER (ADMIN ONLY)
- * =====================
- */
-const register = async (req, res) => {
-  try {
-    const { name, email, password, role } = req.body;
-
-    if (!name || !email || !password || !role) {
-      return res.status(400).json({
-        success: false,
-        message: "All fields are required",
-      });
-    }
-
-    const existingUser = await User.findOne({ email });
-
-    if (existingUser) {
-      return res.status(409).json({
-        success: false,
-        message: "User already exists",
-      });
-    }
-
-    const user = await User.create({
-      name,
-      email,
-      password,
-      role,
-      forcePasswordChange: true,
-    });
-
-    res.status(201).json({
-      success: true,
-      message: "User created successfully",
-      userId: user._id,
-    });
-  } catch (err) {
-    console.error("REGISTER ERROR:", err);
-    res.status(500).json({
-      success: false,
-      message: "User registration failed",
-    });
-  }
-};
-
-/**
- * =====================
- * FORGOT PASSWORD (ANY USER)
+ * FORGOT PASSWORD
  * =====================
  */
 const forgotPassword = async (req, res) => {
@@ -147,10 +86,11 @@ const forgotPassword = async (req, res) => {
 
     user.resetPasswordToken = hashedToken;
     user.resetPasswordExpires = Date.now() + 15 * 60 * 1000;
-
     await user.save();
 
-    const resetLink = `${process.env.FRONTEND_URL}/reset-password/${rawToken}`;
+    // ✅ FIXED LINK
+    const resetLink =
+      `${process.env.FRONTEND_URL}/reset-password?token=${rawToken}`;
 
     await sendMail(
       user.email,
@@ -158,10 +98,7 @@ const forgotPassword = async (req, res) => {
       passwordResetTemplate(resetLink)
     );
 
-    res.status(200).json({
-      success: true,
-      message: "Reset link sent",
-    });
+    res.status(200).json({ success: true, message: "Reset link sent" });
   } catch (err) {
     console.error("FORGOT PASSWORD ERROR:", err);
     res.status(500).json({
@@ -173,7 +110,7 @@ const forgotPassword = async (req, res) => {
 
 /**
  * =====================
- * RESET PASSWORD (TOKEN BASED)
+ * RESET PASSWORD
  * =====================
  */
 const resetPassword = async (req, res) => {
@@ -231,34 +168,8 @@ const resetPassword = async (req, res) => {
   }
 };
 
-/**
- * =====================
- * GET CURRENT USER
- * =====================
- */
-const getMe = async (req, res) => {
-  try {
-    res.status(200).json({
-      success: true,
-      data: {
-        id: req.user._id,
-        name: req.user.name,
-        email: req.user.email,
-        role: req.user.role,
-      },
-    });
-  } catch (err) {
-    res.status(500).json({
-      success: false,
-      message: "Failed to get user info",
-    });
-  }
-};
-
 module.exports = {
   login,
-  register,
   forgotPassword,
   resetPassword,
-  getMe,
 };
