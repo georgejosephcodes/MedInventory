@@ -16,8 +16,8 @@ const medicineSchema = new mongoose.Schema(
     description: String,
     minStock: {
       type: Number,
-      default: 0,
-      min: 10,
+      default: 10,
+      min: 0,
     },
     isActive: {
       type: Boolean,
@@ -35,6 +35,5 @@ const medicineSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
-
 
 module.exports = mongoose.model("Medicine", medicineSchema);

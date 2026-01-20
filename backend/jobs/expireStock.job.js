@@ -1,7 +1,12 @@
 const cron = require("node-cron");
 const { expireBatches } = require("../services/stock.service");
 
+let started = false;
+
 const startExpireStockJob = () => {
+  if (started) return;
+  started = true;
+
   cron.schedule("0 2 * * *", async () => {
     try {
       const SYSTEM_USER_ID = process.env.SYSTEM_USER_ID;
@@ -12,10 +17,10 @@ const startExpireStockJob = () => {
       }
 
       console.log("Running expire stock job");
-      await expireBatches(SYSTEM_USER_ID);
-      console.log("Expire stock job completed");
+      const result = await expireBatches(SYSTEM_USER_ID);
+      console.log("Expire stock job completed:", result);
     } catch (err) {
-      console.error("Expire stock job failed:", err.message);
+      console.error("Expire stock job failed:", err);
     }
   });
 };

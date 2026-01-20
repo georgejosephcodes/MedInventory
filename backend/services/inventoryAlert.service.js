@@ -3,6 +3,8 @@ const Batch = require("../models/Batch.model");
 const getInventoryAlerts = async () => {
   try {
     const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
     const next30Days = new Date(today);
     next30Days.setDate(today.getDate() + 30);
 
@@ -38,9 +40,15 @@ const getInventoryAlerts = async () => {
       { $sort: { expiryDate: 1 } },
     ]);
 
-    // 🔔 LOW STOCK
+    // 🔔 LOW STOCK (exclude expired / zero qty)
     const lowStockMedicines = await Batch.aggregate([
-      { $match: { isActive: true } },
+      {
+        $match: {
+          isActive: true,
+          quantity: { $gt: 0 },
+          expiryDate: { $gt: today },
+        },
+      },
       {
         $group: {
           _id: "$medicineId",

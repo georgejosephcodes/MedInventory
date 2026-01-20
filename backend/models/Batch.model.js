@@ -21,13 +21,11 @@ const batchSchema = new mongoose.Schema(
       required: true,
       min: 0,
     },
-
     unitPrice: {
       type: Number,
       required: true,
       min: 0,
     },
-
     supplier: {
       type: String,
       trim: true,
@@ -50,13 +48,11 @@ const batchSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// Prevent duplicate active batch numbers per medicine
 batchSchema.index(
   { medicineId: 1, batchNumber: 1 },
-  {
-    unique: true,
-    partialFilterExpression: { isActive: true },
-  }
+  { unique: true, partialFilterExpression: { isActive: true } }
 );
+
+batchSchema.index({ expiryDate: 1, quantity: 1, isActive: 1 });
 
 module.exports = mongoose.model("Batch", batchSchema);
