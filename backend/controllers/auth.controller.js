@@ -48,7 +48,10 @@ const login = async (req, res) => {
     });
   } catch (err) {
     console.error("LOGIN ERROR:", err);
-    res.status(500).json({ success: false, message: "Login failed" });
+    res.status(500).json({
+      success: false,
+      message: "Login failed",
+    });
   }
 };
 
@@ -88,7 +91,6 @@ const forgotPassword = async (req, res) => {
     user.resetPasswordExpires = Date.now() + 15 * 60 * 1000;
     await user.save();
 
-    // ✅ FIXED LINK
     const resetLink =
       `${process.env.FRONTEND_URL}/reset-password?token=${rawToken}`;
 
@@ -98,7 +100,10 @@ const forgotPassword = async (req, res) => {
       passwordResetTemplate(resetLink)
     );
 
-    res.status(200).json({ success: true, message: "Reset link sent" });
+    res.status(200).json({
+      success: true,
+      message: "Reset link sent",
+    });
   } catch (err) {
     console.error("FORGOT PASSWORD ERROR:", err);
     res.status(500).json({
@@ -168,8 +173,33 @@ const resetPassword = async (req, res) => {
   }
 };
 
+/**
+ * =====================
+ * GET CURRENT USER
+ * =====================
+ */
+const getMe = async (req, res) => {
+  try {
+    res.status(200).json({
+      success: true,
+      data: {
+        id: req.user._id,
+        name: req.user.name,
+        email: req.user.email,
+        role: req.user.role,
+      },
+    });
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      message: "Failed to get user info",
+    });
+  }
+};
+
 module.exports = {
   login,
   forgotPassword,
   resetPassword,
+  getMe,
 };
