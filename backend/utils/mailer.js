@@ -1,21 +1,23 @@
 const { Resend } = require("resend");
 
-if (!process.env.RESEND_API_KEY) {
-  console.error("RESEND_API_KEY is missing");
-}
+console.log("🔑 RESEND_API_KEY exists:", !!process.env.RESEND_API_KEY);
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 const sendMail = async (to, subject, html) => {
+  console.log("📧 Attempting to send email to:", to);
+
   try {
-    await resend.emails.send({
+    const res = await resend.emails.send({
       from: "MedInventory <onboarding@resend.dev>",
       to,
       subject,
       html,
     });
+
+    console.log("✅ Resend response:", res);
   } catch (err) {
-    console.error("MAIL ERROR:", err);
+    console.error("❌ MAIL ERROR FULL:", err);
   }
 };
 
