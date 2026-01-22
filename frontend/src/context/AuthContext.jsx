@@ -23,28 +23,36 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
-  const login = async (email, password) => {
-    try {
-      const res = await apiLogin({ email, password });
-      const { token, role } = res.data;
+const login = async (email, password) => {
+  try {
+    const res = await apiLogin({ email, password });
+    const { token, role, name } = res.data;
 
-      if (!token || !role) {
-        return { success: false, error: 'Invalid response' };
-      }
-
-      localStorage.setItem('token', token);
-      localStorage.setItem('role', JSON.stringify(role));
-
-      setUser({ role });
-
-      return { success: true };
-    } catch (err) {
-      return {
-        success: false,
-        error: err.response?.data?.message || 'Login failed',
-      };
+    if (!token || !role) {
+      return { success: false, error: "Invalid response" };
     }
-  };
+
+    localStorage.setItem("token", token);
+    localStorage.setItem("role", JSON.stringify(role));
+
+    if (name) {
+      localStorage.setItem("name", name);
+    }
+
+    setUser({
+      role,
+      name: name || null,
+    });
+
+    return { success: true };
+  } catch (err) {
+    return {
+      success: false,
+      error: err.response?.data?.message || "Login failed",
+    };
+  }
+};
+
 
   const logout = () => {
     localStorage.clear();

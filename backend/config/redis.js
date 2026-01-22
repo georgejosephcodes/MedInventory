@@ -5,7 +5,7 @@ let isRedisReady = false;
 const redis = process.env.REDIS_URL
   ? new Redis(process.env.REDIS_URL, {
       tls: {},                // REQUIRED
-      maxRetriesPerRequest: 1,
+      maxRetriesPerRequest: 3,
       enableReadyCheck: true,
     })
   : new Redis({

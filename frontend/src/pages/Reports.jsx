@@ -1,22 +1,27 @@
-import { useEffect, useMemo, useState } from "react";
-import { format } from "date-fns";
-import { CalendarIcon } from "lucide-react";
+import { useEffect, useMemo, useState } from "react"
+import { format } from "date-fns"
+import { CalendarIcon, Download } from "lucide-react"
 
 import {
   getMonthlyUsage,
   getTopConsumed,
   getExpiredWastage,
-} from "../lib/api";
+} from "../lib/api"
 
-import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
-import { Button } from "../components/ui/button";
-import { Label } from "../components/ui/label";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "../components/ui/card"
+import { Button } from "../components/ui/button"
+import { Label } from "../components/ui/label"
 import {
   Tabs,
   TabsContent,
   TabsList,
   TabsTrigger,
-} from "../components/ui/tabs";
+} from "../components/ui/tabs"
 
 import {
   PieChart,
@@ -26,28 +31,66 @@ import {
   Legend,
   ResponsiveContainer,
   Label as RechartLabel,
-} from "recharts";
+} from "recharts"
 
-import { Calendar } from "../components/ui/calendar";
+import { Calendar } from "../components/ui/calendar"
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "../components/ui/popover";
+} from "../components/ui/popover"
+import { useToast } from "@/hooks/use-toast"
 
 /* =========================
    COLOR PALETTE
 ========================= */
 const COLORS = [
-  "#3b82f6",
-  "#10b981",
-  "#f59e0b",
-  "#ef4444",
-  "#8b5cf6",
-  "#14b8a6",
-  "#ec4899",
-  "#6366f1",
-];
+  "#60a5fa",
+  "#34d399",
+  "#fbbf24",
+  "#f87171",
+  "#a78bfa",
+  "#2dd4bf",
+  "#fb7185",
+  "#818cf8",
+]
+
+/* =========================
+   CSV HELPERS
+========================= */
+const csvEscape = (v) =>
+  `"${String(v ?? "").replace(/"/g, '""')}"`
+
+const exportReportsCSV = (data, type) => {
+  if (!data.length) return
+
+  const headers = [
+    "Medicine Name",
+    "Quantity",
+    "Total Cost",
+    "Report Type",
+  ]
+
+  const rows = data.map((i) =>
+    [
+      csvEscape(i.medicine || i.name),
+      csvEscape(i.totalUsed ?? i.wastedQty),
+      csvEscape(i.totalCost ?? 0),
+      csvEscape(type),
+    ].join(",")
+  )
+
+  const csv = [headers.join(","), ...rows].join("\n")
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" })
+  const url = URL.createObjectURL(blob)
+
+  const a = document.createElement("a")
+  a.href = url
+  a.download = `reports_${type}_${Date.now()}.csv`
+  a.click()
+
+  URL.revokeObjectURL(url)
+}
 
 /* =========================
    DATE PICKER
@@ -58,8 +101,11 @@ function DatePicker({ label, value, onChange }) {
       <Label>{label}</Label>
       <Popover>
         <PopoverTrigger asChild>
-          <Button variant="outline" className="w-full justify-start text-left">
-            {value ? format(value, "MM/dd/yyyy") : "mm/dd/yyyy"}
+          <Button
+            variant="outline"
+            className="w-full justify-start text-left font-normal"
+          >
+            {value ? format(value, "dd/MM/yyyy") : "Select date"}
             <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
           </Button>
         </PopoverTrigger>
@@ -68,71 +114,103 @@ function DatePicker({ label, value, onChange }) {
             mode="single"
             selected={value}
             onSelect={onChange}
-            captionLayout="dropdown"
             initialFocus
           />
         </PopoverContent>
       </Popover>
     </div>
-  );
+  )
 }
 
 export default function Reports() {
-  const today = new Date();
-  const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+  const { toast } = useToast()
 
-  const [from, setFrom] = useState(monthStart);
-  const [to, setTo] = useState(today);
+  const today = new Date()
+  const monthStart = new Date(today.getFullYear(), today.getMonth(), 1)
 
-  const [usage, setUsage] = useState([]);
-  const [top, setTop] = useState([]);
-  const [expired, setExpired] = useState([]);
+  const [from, setFrom] = useState(monthStart)
+  const [to, setTo] = useState(today)
+
+  const [usage, setUsage] = useState([])
+  const [top, setTop] = useState([])
+  const [expired, setExpired] = useState([])
+  const [loading, setLoading] = useState(false)
 
   /* =========================
      FETCH REPORTS
   ========================= */
   useEffect(() => {
     const fetchReports = async () => {
-      const [u, t, e] = await Promise.all([
-        getMonthlyUsage({ from: from.toISOString(), to: to.toISOString() }),
-        getTopConsumed({ from: from.toISOString(), to: to.toISOString() }),
-        getExpiredWastage({ from: from.toISOString(), to: to.toISOString() }),
-      ]);
+      setLoading(true)
+      try {
+        const [u, t, e] = await Promise.all([
+          getMonthlyUsage({ from: from.toISOString(), to: to.toISOString() }),
+          getTopConsumed({ from: from.toISOString(), to: to.toISOString() }),
+          getExpiredWastage({ from: from.toISOString(), to: to.toISOString() }),
+        ])
 
-      setUsage(u.data.data || []);
-      setTop(t.data.data || []);
-      setExpired(e.data.data || []);
-    };
+        setUsage(u.data.data || [])
+        setTop(t.data.data || [])
+        setExpired(e.data.data || [])
+      } catch {
+        toast({
+          variant: "destructive",
+          title: "Failed to load reports",
+        })
+      } finally {
+        setLoading(false)
+      }
+    }
 
-    fetchReports();
-  }, [from, to]);
+    fetchReports()
+  }, [from, to])
 
+  /* =========================
+     TOTALS
+  ========================= */
   const calcTotals = (data, qtyKey) => ({
     units: data.reduce((s, i) => s + (i[qtyKey] || 0), 0),
     cost: data.reduce((s, i) => s + (i.totalCost || 0), 0),
-  });
+  })
 
-  const usageTotals = useMemo(() => calcTotals(usage, "totalUsed"), [usage]);
-  const topTotals = useMemo(() => calcTotals(top, "totalUsed"), [top]);
-  const expiredTotals = useMemo(() => calcTotals(expired, "wastedQty"), [expired]);
+  const usageTotals = useMemo(() => calcTotals(usage, "totalUsed"), [usage])
+  const topTotals = useMemo(() => calcTotals(top, "totalUsed"), [top])
+  const expiredTotals = useMemo(
+    () => calcTotals(expired, "wastedQty"),
+    [expired]
+  )
 
+  /* =========================
+     COLOR MAP
+  ========================= */
   const colorMap = useMemo(() => {
-    const map = {};
-    let i = 0;
-    [...usage, ...top, ...expired].forEach((item) => {
-      const key = item.medicine || item.name;
-      if (!map[key]) map[key] = COLORS[i++ % COLORS.length];
-    });
-    return map;
-  }, [usage, top, expired]);
+    const map = {}
+    let i = 0
+    ;[...usage, ...top, ...expired].forEach((item) => {
+      const key = item.medicine || item.name
+      if (!map[key]) map[key] = COLORS[i++ % COLORS.length]
+    })
+    return map
+  }, [usage, top, expired])
 
+  /* =========================
+     DONUT
+  ========================= */
   const Donut = ({ data, dataKey, nameKey, totals }) => {
+    if (loading) {
+      return (
+        <div className="h-[300px] flex items-center justify-center text-muted-foreground">
+          Loading…
+        </div>
+      )
+    }
+
     if (!data.length) {
       return (
         <div className="h-[300px] flex items-center justify-center text-muted-foreground">
-          Nothing to show here
+          No data available
         </div>
-      );
+      )
     }
 
     return (
@@ -142,9 +220,9 @@ export default function Reports() {
             data={data}
             dataKey={dataKey}
             nameKey={nameKey}
-            innerRadius={70}
+            innerRadius={72}
             outerRadius={110}
-            strokeWidth={2}
+            stroke="transparent"
           >
             {data.map((i, idx) => (
               <Cell
@@ -161,38 +239,45 @@ export default function Reports() {
                   dominantBaseline="middle"
                 >
                   <tspan className="fill-foreground text-lg font-semibold">
-                    Units: {totals.units}
+                    {totals.units} units
                   </tspan>
                   <tspan
                     x={viewBox.cx}
                     dy={20}
                     className="fill-muted-foreground text-sm"
                   >
-                    (₹{totals.cost.toFixed(2)})
+                    ₹{totals.cost.toFixed(2)}
                   </tspan>
                 </text>
               )}
             />
           </Pie>
-          <Tooltip
-            formatter={(value, name, props) => [
-              `Units: ${value} | ₹${(props.payload.totalCost || 0).toFixed(2)}`,
-              name,
-            ]}
-          />
+          <Tooltip />
           <Legend />
         </PieChart>
       </ResponsiveContainer>
-    );
-  };
+    )
+  }
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Reports</h1>
-        <p className="text-muted-foreground">
-          Analytics based on selected date range
-        </p>
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold">Reports</h1>
+          <p className="text-muted-foreground">
+            Analytics based on selected date range
+          </p>
+        </div>
+
+        <Button
+          variant="outline"
+          onClick={() =>
+            exportReportsCSV(usage, "usage")
+          }
+        >
+          <Download className="h-4 w-4 mr-2" />
+          Export CSV
+        </Button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-md">
@@ -209,7 +294,9 @@ export default function Reports() {
 
         <TabsContent value="usage">
           <Card>
-            <CardHeader><CardTitle>Usage Distribution</CardTitle></CardHeader>
+            <CardHeader>
+              <CardTitle>Usage Distribution</CardTitle>
+            </CardHeader>
             <CardContent>
               <Donut
                 data={usage}
@@ -223,7 +310,9 @@ export default function Reports() {
 
         <TabsContent value="top">
           <Card>
-            <CardHeader><CardTitle>Top Consumed</CardTitle></CardHeader>
+            <CardHeader>
+              <CardTitle>Top Consumed</CardTitle>
+            </CardHeader>
             <CardContent>
               <Donut
                 data={top}
@@ -237,7 +326,9 @@ export default function Reports() {
 
         <TabsContent value="expired">
           <Card>
-            <CardHeader><CardTitle>Expired / Wastage</CardTitle></CardHeader>
+            <CardHeader>
+              <CardTitle>Expired / Wastage</CardTitle>
+            </CardHeader>
             <CardContent>
               <Donut
                 data={expired}
@@ -250,5 +341,5 @@ export default function Reports() {
         </TabsContent>
       </Tabs>
     </div>
-  );
+  )
 }

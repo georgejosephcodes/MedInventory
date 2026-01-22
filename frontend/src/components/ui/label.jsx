@@ -1,27 +1,32 @@
-import * as React from "react";
-import * as LabelPrimitive from "@radix-ui/react-label";
-import { cva } from "class-variance-authority";
-import { cn } from "@/lib/utils";
+import * as React from "react"
+import * as LabelPrimitive from "@radix-ui/react-label"
+import { cva } from "class-variance-authority"
+import { cn } from "@/lib/utils"
 
 const labelVariants = cva(
-  "text-sm font-medium text-muted-foreground tracking-tight leading-none",
+  "text-sm font-medium leading-none tracking-tight text-muted-foreground",
   {
     variants: {
       disabled: {
         true: "cursor-not-allowed opacity-60",
       },
     },
-    defaultVariants: {},
   }
-);
+)
 
 const Label = React.forwardRef(({ className, ...props }, ref) => (
   <LabelPrimitive.Root
     ref={ref}
-    className={cn(labelVariants(), className)}
+    className={cn(
+      labelVariants(),
+      "transition-colors",
+      "peer-focus-visible:text-foreground",
+      className
+    )}
     {...props}
   />
-));
-Label.displayName = LabelPrimitive.Root.displayName;
+))
 
-export { Label };
+Label.displayName = LabelPrimitive.Root.displayName
+
+export { Label }

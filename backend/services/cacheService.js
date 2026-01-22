@@ -6,9 +6,14 @@ class CacheService {
       if (!redis.isReady()) return null;
 
       const data = await redis.get(key);
-      return data ? JSON.parse(data) : null;
-    } catch (err) {
-      // fail-open
+      if (!data) return null;
+
+      try {
+        return JSON.parse(data);
+      } catch {
+        return null;
+      }
+    } catch {
       return null;
     }
   }
@@ -17,29 +22,42 @@ class CacheService {
     try {
       if (!redis.isReady()) return;
 
-      await redis.setex(key, ttl, JSON.stringify(value));
-    } catch (err) {
-      // ignore redis failure
-    }
+      await redis.set(
+        key,
+        JSON.stringify(value),
+        "EX",
+        ttl
+      );
+    } catch {}
   }
 
   async del(key) {
     try {
       if (!redis.isReady()) return;
-
       await redis.del(key);
-    } catch (err) {}
+    } catch {}
   }
 
   async delPattern(pattern) {
     try {
       if (!redis.isReady()) return;
 
-      const keys = await redis.keys(pattern);
-      if (keys.length) {
-        await redis.del(keys);
-      }
-    } catch (err) {}
+      let cursor = "0";
+      do {
+        const [nextCursor, keys] = await redis.scan(
+          cursor,
+          "MATCH",
+          pattern,
+          "COUNT",
+          100
+        );
+        cursor = nextCursor;
+
+        if (keys.length) {
+          await redis.del(keys);
+        }
+      } while (cursor !== "0");
+    } catch {}
   }
 }
 
