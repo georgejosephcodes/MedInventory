@@ -1,4 +1,4 @@
-# 🏥 MedInventory
+# MedInventory
 
 A **backend-heavy medical inventory management system** designed to model **real hospital workflows** with **auditability, safety, and scalability** as first-class concerns.
 
@@ -6,7 +6,7 @@ This project focuses on **correct domain modeling**, **transaction safety**, and
 
 ---
 
-## 📌 Problem Statement
+## Problem Statement
 
 Hospitals and pharmacies must manage medicines with:
 
@@ -26,9 +26,9 @@ Most simple inventory systems fail to:
 
 ---
 
-## 🎯 Core Features
+## Core Features
 
-### 🔐 Authentication & Authorization
+### Authentication & Authorization
 
 - JWT-based authentication (stateless)
 - Role-Based Access Control (RBAC)
@@ -40,7 +40,7 @@ Most simple inventory systems fail to:
 
 ---
 
-### 💊 Inventory Management (Real-World Model)
+### Inventory Management (Real-World Model)
 
 - Medicine master data (**no quantity stored here**)
 - Batch-level inventory with:
@@ -51,7 +51,7 @@ Most simple inventory systems fail to:
 
 ---
 
-### 🧾 Audit & Compliance
+### Audit & Compliance
 
 - **Immutable stock logs**
   - `STOCK_IN`
@@ -66,7 +66,7 @@ Audit logs are **never updated or deleted**.
 
 ---
 
-### 🔁 Transaction Safety
+### Transaction Safety
 
 MongoDB transactions are used for:
 
@@ -83,7 +83,7 @@ Either **everything succeeds**, or **nothing changes**.
 
 ---
 
-### ⏰ Background Jobs (Cron)
+### Background Jobs (Cron)
 
 - Daily auto-expiry of medicines
 - Daily inventory alert emails:
@@ -92,7 +92,7 @@ Either **everything succeeds**, or **nothing changes**.
 
 ---
 
-### 📊 Reports & Metrics
+### Reports & Metrics
 
 - Monthly medicine usage
 - Top consumed medicines
@@ -100,7 +100,7 @@ Either **everything succeeds**, or **nothing changes**.
 
 ---
 
-### 📧 Clean Email System
+### Clean Email System
 
 - Secure password reset via email token
 - Inventory alert emails for admins
@@ -108,7 +108,7 @@ Either **everything succeeds**, or **nothing changes**.
 
 ---
 
-## 🧠 Key Design Decisions
+## Key Design Decisions
 
 ### Why Medicine & Batch Are Separate
 
@@ -164,7 +164,7 @@ Transactions guarantee:
 
 ---
 
-## 🧩 Architecture Overview
+## Architecture Overview
 
 Client (UI / Postman)
 ↓
@@ -185,7 +185,7 @@ Background cron jobs run alongside the API process.
 
 ---
 
-## 🔑 Roles & Permissions
+## Roles & Permissions
 
 | Action            | ADMIN | PHARMACIST | STAFF |
 |-------------------|-------|------------|-------|
@@ -197,7 +197,7 @@ Background cron jobs run alongside the API process.
 
 ---
 
-## 🔄 API Highlights
+## API Highlights
 
 ### Auth
 - `POST /auth/login`
@@ -219,7 +219,7 @@ Background cron jobs run alongside the API process.
 
 ---
 
-## ⚙️ Tech Stack
+## Tech Stack
 
 - **Backend:** Node.js, Express
 - **Database:** MongoDB, Mongoose
@@ -230,13 +230,13 @@ Background cron jobs run alongside the API process.
 
 ---
 
-## 🚀 Getting Started
+## Getting Started
 
-### 1️⃣ Install dependencies
+### 1 Install dependencies
 ```bash
 npm install
 
-2️⃣ Create .env file
+2 Create .env file
 PORT=8000
 MONGO_URI=your_mongodb_uri
 JWT_SECRET=your_secret
@@ -244,19 +244,18 @@ ALERT_EMAIL=yourgmail@gmail.com
 ALERT_EMAIL_PASSWORD=app_password
 FRONTEND_URL=http://localhost:3000
 
-3️⃣ Run the server
+3 Run the server
 npm run dev
 
-🛡️ Security Notes
+Security Notes
 Passwords are never stored or retrievable in plaintext
 Admins cannot view user passwords
 Password recovery uses time-limited tokens
 Sensitive operations are role-restricted
 Audit logs cannot be altered
 
-📈 Future Enhancements (Planned)
+Future Enhancements (Planned)
 Prescription module
 Billing integration
-Dashboard visualizations
 Advanced concurrency handling
 Mobile app integration
