@@ -1,0 +1,19 @@
+from flask import Flask, request, jsonify
+from anomaly import detect_anomalies
+
+app = Flask(__name__)
+
+@app.route('/detect', methods=['POST'])
+def detect():
+    data = request.json
+    logs = data.get('logs', [])
+    
+    anomalous_ids = detect_anomalies(logs)
+    
+    return jsonify({
+        "success": True,
+        "anomalousIds": anomalous_ids
+    })
+
+if __name__ == '__main__':
+    app.run(port=5001, debug=True)

@@ -5,6 +5,7 @@ const connectDB = require("./config/db");
 const createAdminIfNotExists = require("./utils/createAdmin");
 const startExpireStockJob = require("./jobs/expireStock.job");
 const startInventoryAlertJob = require("./jobs/inventoryAlert.job");
+const startAnomalyDetectionJob = require("./jobs/anomalyDetection.job");
 const redis = require("./config/redis");
 
 const PORT = process.env.PORT || 8000;
@@ -21,6 +22,7 @@ let server;
 
     startExpireStockJob();
     startInventoryAlertJob();
+    startAnomalyDetectionJob();
   } catch (err) {
     console.error("Server startup failed:", err);
     process.exit(1);

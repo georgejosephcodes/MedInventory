@@ -41,6 +41,10 @@ const stockLogSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
+    isAnomaly: {
+    type: Boolean,
+    default: false
+  },
   },
   { timestamps: true }
 );

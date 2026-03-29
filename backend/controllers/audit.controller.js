@@ -72,7 +72,7 @@ const getStockLogs = async (req, res) => {
     const [logs, total] = await Promise.all([
       StockLog.find(query)
         .select(
-          "medicineId batchId action quantity unitPrice totalCost performedBy note createdAt"
+          "medicineId batchId action quantity unitPrice totalCost performedBy note createdAt isAnomaly"
         )
         .populate("medicineId", "name category")
         .populate("batchId", "batchNumber expiryDate unitPrice")

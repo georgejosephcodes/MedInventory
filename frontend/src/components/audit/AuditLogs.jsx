@@ -1,4 +1,5 @@
 import { format } from "date-fns";
+import { AlertTriangle } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -106,7 +107,18 @@ export default function AuditLogs({ logs }) {
 
               {/* QUANTITY */}
               <TableCell className="text-center">
-                {log.quantity}
+                <div className="flex items-center justify-center gap-1">
+                  {log.quantity}
+                  {log.isAnomaly && (
+                    <span
+                      className="flex items-center gap-1 text-xs text-orange-500 font-semibold"
+                      title="Unusual quantity detected"
+                    >
+                      <AlertTriangle className="h-3 w-3" />
+                      Unusual
+                    </span>
+                  )}
+                </div>
               </TableCell>
 
               {/* UNIT PRICE */}

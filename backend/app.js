@@ -30,6 +30,7 @@ app.use("/api/audit", auditRoutes);
 app.use("/api/reports", reportRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/dashboard", dashboardRoutes);
+
 // 404 fallback 
 app.use((req, res) => {
   res.status(404).json({
@@ -39,4 +40,3 @@ app.use((req, res) => {
 });
 
 module.exports = app;
- 
