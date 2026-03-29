@@ -3,6 +3,10 @@ from anomaly import detect_anomalies
 
 app = Flask(__name__)
 
+@app.route('/health', methods=['GET'])
+def health():
+    return jsonify({"status": "ok"})
+
 @app.route('/detect', methods=['POST'])
 def detect():
     data = request.json
