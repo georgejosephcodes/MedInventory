@@ -1,12 +1,12 @@
-# MedInventory
+# 🏥 MedInventory
 
 A **backend-heavy medical inventory management system** designed to model **real hospital workflows** with **auditability, safety, and scalability** as first-class concerns.
 
-This project focuses on **correct domain modeling**, **transaction safety**, and **compliance-grade audit trails**, rather than UI-heavy features.
+This project focuses on **correct domain modeling**, **transaction safety**, **compliance-grade audit trails**, and **ML-based anomaly detection**.
 
 ---
 
-## Problem Statement
+## 📌 Problem Statement
 
 Hospitals and pharmacies must manage medicines with:
 
@@ -21,14 +21,15 @@ Most simple inventory systems fail to:
 - Handle expiry correctly
 - Track **who did what and when**
 - Prevent partial or invalid stock operations
+- Detect suspicious or unusual stock activity
 
-**MedInventory** solves these problems using **proper data modeling**, **MongoDB transactions**, and **immutable audit logs**.
+**MedInventory** solves these problems using **proper data modeling**, **MongoDB transactions**, **immutable audit logs**, and **ML-based anomaly detection**.
 
 ---
 
-## Core Features
+## 🎯 Core Features
 
-### Authentication & Authorization
+### 🔐 Authentication & Authorization
 
 - JWT-based authentication (stateless)
 - Role-Based Access Control (RBAC)
@@ -40,7 +41,7 @@ Most simple inventory systems fail to:
 
 ---
 
-### Inventory Management (Real-World Model)
+### 💊 Inventory Management (Real-World Model)
 
 - Medicine master data (**no quantity stored here**)
 - Batch-level inventory with:
@@ -51,7 +52,7 @@ Most simple inventory systems fail to:
 
 ---
 
-### Audit & Compliance
+### 🧾 Audit & Compliance
 
 - **Immutable stock logs**
   - `STOCK_IN`
@@ -66,7 +67,22 @@ Audit logs are **never updated or deleted**.
 
 ---
 
-### Transaction Safety
+### 🤖 ML-Based Anomaly Detection
+
+- Detects **unusual stock-out patterns** per medicine using **Isolation Forest** (scikit-learn)
+- Runs as a **scheduled nightly job** — no manual trigger needed
+- Flags suspicious logs with an ⚠️ indicator in the Audit Logs UI
+- Built as a **Python Flask microservice**, integrated with the Node.js backend via REST API
+- Per-medicine detection — each medicine's "normal" consumption is learned independently
+
+**Why Isolation Forest?**
+- Unsupervised — no labeled training data needed
+- Learns normal consumption patterns automatically
+- Short isolation path = anomaly (e.g. 50 units issued when normal is 2-3)
+
+---
+
+### 🔁 Transaction Safety
 
 MongoDB transactions are used for:
 
@@ -83,16 +99,17 @@ Either **everything succeeds**, or **nothing changes**.
 
 ---
 
-### Background Jobs (Cron)
+### ⏰ Background Jobs (Cron)
 
 - Daily auto-expiry of medicines
 - Daily inventory alert emails:
   - Medicines expiring within 30 days
   - Low stock (below minimum threshold)
+- **Nightly anomaly detection** — flags unusual stock-out patterns using ML
 
 ---
 
-### Reports & Metrics
+### 📊 Reports & Metrics
 
 - Monthly medicine usage
 - Top consumed medicines
@@ -100,7 +117,7 @@ Either **everything succeeds**, or **nothing changes**.
 
 ---
 
-### Clean Email System
+### 📧 Clean Email System
 
 - Secure password reset via email token
 - Inventory alert emails for admins
@@ -108,7 +125,7 @@ Either **everything succeeds**, or **nothing changes**.
 
 ---
 
-## Key Design Decisions
+## 🧠 Key Design Decisions
 
 ### Why Medicine & Batch Are Separate
 
@@ -120,9 +137,10 @@ A single medicine can have:
 
 Storing quantity on the medicine level leads to **incorrect expiry handling**.
 
-**Correct model**
+**Correct model:**
+```
 Medicine → Batch → StockLog
-
+```
 
 ---
 
@@ -164,8 +182,20 @@ Transactions guarantee:
 
 ---
 
-## Architecture Overview
+### Why ML Anomaly Detection (Not Simple Rules)
 
+A rule-based threshold (e.g. "flag if > 20 units") fails because:
+
+- Different medicines have different normal quantities
+- Thresholds need constant manual tuning
+
+Isolation Forest learns per-medicine consumption patterns automatically and adapts to the data.
+
+---
+
+## 🧩 Architecture Overview
+
+```
 Client (UI / Postman)
 ↓
 Express API
@@ -180,12 +210,19 @@ MongoDB
 ├── StockLogs
 └── Users
 
+Python Flask ML Service (port 5001)
+├── Isolation Forest model
+└── /detect endpoint
 
-Background cron jobs run alongside the API process.
+Background cron jobs:
+├── Expire stock (daily 2AM)
+├── Inventory alerts (daily 9AM)
+└── Anomaly detection (daily midnight)
+```
 
 ---
 
-## Roles & Permissions
+## 🔑 Roles & Permissions
 
 | Action            | ADMIN | PHARMACIST | STAFF |
 |-------------------|-------|------------|-------|
@@ -197,7 +234,7 @@ Background cron jobs run alongside the API process.
 
 ---
 
-## API Highlights
+## 🔄 API Highlights
 
 ### Auth
 - `POST /auth/login`
@@ -219,43 +256,74 @@ Background cron jobs run alongside the API process.
 
 ---
 
-## Tech Stack
+## ⚙️ Tech Stack
 
 - **Backend:** Node.js, Express
 - **Database:** MongoDB, Mongoose
 - **Authentication:** JWT, bcrypt
 - **Background Jobs:** node-cron
-- **Email:** Nodemailer (Gmail App Password)
+- **Email:** Resend
+- **Cache:** Redis (ioredis)
+- **ML Service:** Python, Flask, scikit-learn (Isolation Forest)
 - **Security:** RBAC, hashed passwords, protected routes
 
 ---
 
-## Getting Started
+## 🚀 Getting Started
 
-### 1 Install dependencies
+### Backend
+
+#### 1️⃣ Install dependencies
 ```bash
+cd backend
 npm install
+```
 
-2 Create .env file
+#### 2️⃣ Create `.env` file
+```
 PORT=8000
 MONGO_URI=your_mongodb_uri
 JWT_SECRET=your_secret
-ALERT_EMAIL=yourgmail@gmail.com
-ALERT_EMAIL_PASSWORD=app_password
-FRONTEND_URL=http://localhost:3000
+RESEND_API_KEY=your_resend_key
+ML_SERVICE_URL=http://127.0.0.1:5001
+SYSTEM_USER_ID=your_admin_user_id
+```
 
-3 Run the server
+#### 3️⃣ Run the server
+```bash
 npm run dev
+```
 
-Security Notes
-Passwords are never stored or retrievable in plaintext
-Admins cannot view user passwords
-Password recovery uses time-limited tokens
-Sensitive operations are role-restricted
-Audit logs cannot be altered
+---
 
-Future Enhancements (Planned)
-Prescription module
-Billing integration
-Advanced concurrency handling
-Mobile app integration
+### ML Service
+
+#### 1️⃣ Install dependencies
+```bash
+cd ml
+pip install -r requirements.txt
+```
+
+#### 2️⃣ Run the Flask server
+```bash
+python app.py
+```
+
+---
+
+## 🛡️ Security Notes
+
+- Passwords are never stored or retrievable in plaintext
+- Admins cannot view user passwords
+- Password recovery uses time-limited tokens
+- Sensitive operations are role-restricted
+- Audit logs cannot be altered
+
+---
+
+## 📈 Future Enhancements (Planned)
+
+- Prescription module
+- Billing integration
+- Advanced concurrency handling
+- Mobile app integration
