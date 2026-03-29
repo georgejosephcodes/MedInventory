@@ -23,7 +23,7 @@ def detect_anomalies(logs):
         ids = [log["id"] for log in med_logs]
         quantities = np.array([log["quantity"] for log in med_logs]).reshape(-1, 1)
         
-        model = IsolationForest(contamination=0.05, random_state=42)
+        model = IsolationForest(contamination=0.01, random_state=42)
         predictions = model.fit_predict(quantities)
         
         flagged = [ids[i] for i, pred in enumerate(predictions) if pred == -1]
