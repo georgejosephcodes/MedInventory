@@ -15,7 +15,7 @@ const sendMail = async (to, subject, html) => {
   try {
     const res = await resend.emails.send({
       from: "MedInventory <onboarding@resend.dev>",
-      to: "hustleultimate3@gmail.com",
+      to: process.env.ALERT_EMAIL,
       subject,
       html,
     });
