@@ -1,6 +1,8 @@
 const express = require("express");
 const app = express();
 const cors = require('cors');
+const redis = require("./config/redis"); // ← add this
+
 // Routes
 const batchRoutes = require("./routes/batch.routes");
 const authRoutes = require("./routes/auth.routes");
@@ -32,7 +34,8 @@ app.use("/api/admin", adminRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 
 // Health check
-app.get("/health", (req, res) => {
+app.get("/health", async (req, res) => {
+  await redis.ping();
   res.status(200).json({ status: "ok" });
 });
 
