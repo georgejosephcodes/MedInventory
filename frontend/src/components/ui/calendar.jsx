@@ -50,14 +50,14 @@ export function Calendar({
           "dark:hover:bg-sky-400/20 dark:hover:text-sky-200 " +
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
 
-        /* ✅ LIGHT BLUE SELECTED */
+        /* ✅ SELECTED */
         day_selected:
-          "bg-sky-300 text-sky-900 hover:bg-sky-300 " +
-          "dark:bg-sky-400/30 dark:text-sky-200",
+          "bg-sky-500 text-white hover:bg-sky-500 " +
+          "dark:bg-sky-500 dark:text-white",
 
         /* Today highlight */
         day_today:
-          "bg-sky-100 text-sky-900 font-semibold dark:bg-sky-400/20 dark:text-sky-200",
+          "bg-sky-200 text-sky-900 font-semibold dark:bg-sky-500/40 dark:text-sky-100",
 
         day_outside:
           "text-muted-foreground opacity-40",
